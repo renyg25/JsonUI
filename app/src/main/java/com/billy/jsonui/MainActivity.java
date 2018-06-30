@@ -1,5 +1,8 @@
 package com.billy.jsonui;
 
+import android.app.Application;
+import android.content.Context;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -8,9 +11,24 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.StringReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+
 public class MainActivity extends AppCompatActivity {
+
+    public static MainActivity Current;
+
+    private TextView textView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,12 +45,64 @@ public class MainActivity extends AppCompatActivity {
                         .setAction("Action", null).show();
             }
         });
+
+        textView = (TextView) findViewById(R.id.textView);
+
+        Current = this;
     }
 
-    public void onClick(View view){
+    public void onClick(View view) throws IOException {
         Toast.makeText(this, "Clicked", Toast.LENGTH_LONG).show();
 
-        String url = "http://www.djhub.net/api/top?type=downloads";
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String urlString = "http://www.djhub.net/api/top?type=downloads";
+                URL url = null;
+                try {
+                    url = new URL(urlString);
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
+
+                HttpURLConnection urlConnection = null;
+                try {
+                    urlConnection = (HttpURLConnection) url.openConnection();
+                    urlConnection.setRequestMethod("GET");
+
+                    InputStream in = new BufferedInputStream(urlConnection.getInputStream());
+
+                    BufferedReader br = new BufferedReader(new InputStreamReader(in));
+
+                    String json = "";
+                    String line;
+                    while((line = br.readLine()) != null){
+                        json += line;
+                    }
+
+                    br.close();
+
+                    System.out.println(json);
+
+                    final String js = json;
+                    Current.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            textView.setText(js);
+                        }
+                    });
+
+                }catch (Exception e){
+                    System.err.println(e.getStackTrace());
+                }finally {
+                    urlConnection.disconnect();
+                }
+
+            }
+        }).start();
+
+
+
 
 //        StringRequest request = new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
 //            @Override
