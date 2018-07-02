@@ -1,13 +1,16 @@
 package com.billy.jsonui;
 
-import android.app.Application;
-import android.content.Context;
+import android.app.ProgressDialog;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.JsonReader;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -16,19 +19,21 @@ import android.widget.Toast;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static MainActivity Current;
+    private final String SERVERURL = "http://www.djhub.net/api/top?type=downloads";
 
     private TextView textView;
+    private ProgressDialog progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,12 +52,87 @@ public class MainActivity extends AppCompatActivity {
         });
 
         textView = (TextView) findViewById(R.id.textView);
-
-        Current = this;
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Loading...");
+        progressDialog.setCancelable(false);
     }
+
 
     public void onClick(View view) throws IOException {
         Toast.makeText(this, "Clicked", Toast.LENGTH_LONG).show();
+        //byThread();
+
+        byAsyncTask();
+    }
+
+    private void byAsyncTask(){
+        HttpAsncTask task = new HttpAsncTask();
+        task.execute(SERVERURL);
+    }
+
+
+    private class HttpAsncTask extends AsyncTask<String, Double, String> {
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            progressDialog.show();
+        }
+
+        @Override
+        protected void onProgressUpdate(Double... values) {
+            super.onProgressUpdate(values);
+        }
+
+        @Override
+        protected String doInBackground(String... strings) {
+            String url = strings[0];
+            String json = getData(url);
+            return  json;
+        }
+
+        @Override
+        protected void onPostExecute(String value) {
+            super.onPostExecute(value);
+
+            progressDialog.dismiss();
+            textView.setText(value);
+        }
+    }
+
+    private void byThread(){
+
+        textView.setText("Requesting...");
+        progressDialog.show();
+
+        final Handler handler = new Handler(Looper.getMainLooper()){
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+
+                final Message message = msg;
+
+                //Toast.makeText(MainActivity.Current, "Handler Msg " + message.obj, Toast.LENGTH_SHORT).show();
+
+                try
+                {
+                    progressDialog.hide();
+                    textView.setText("Handler");
+                }catch (Exception e){
+                    System.out.print(e.getStackTrace());
+                }
+
+
+                //textView.setText(message.obj.toString());
+//                MainActivity.Current.runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        Toast.makeText(MainActivity.Current, "Handler Msg " + message.obj, Toast.LENGTH_SHORT).show();
+//                    }
+//                });
+            }
+        };
 
         new Thread(new Runnable() {
             @Override
@@ -65,8 +145,12 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
 
+
                 HttpURLConnection urlConnection = null;
                 try {
+
+                    Thread.sleep(3000);
+
                     urlConnection = (HttpURLConnection) url.openConnection();
                     urlConnection.setRequestMethod("GET");
 
@@ -84,24 +168,33 @@ public class MainActivity extends AppCompatActivity {
 
                     System.out.println(json);
 
-                    final String js = json;
-                    Current.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            textView.setText(js);
-                        }
-                    });
+                    //textView.setText("Done");
+//                    final String js = json;
+//                    Current.runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            textView.setText(js);
+//                        }
+//                    });
+
 
                 }catch (Exception e){
                     System.err.println(e.getStackTrace());
                 }finally {
                     urlConnection.disconnect();
+
+
+                    Message msg = new Message();
+                    msg.obj = "Json from Msg";
+                    handler.sendMessage(msg);
+
                 }
 
             }
         }).start();
 
 
+    }
 
 
 //        StringRequest request = new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
@@ -115,6 +208,49 @@ public class MainActivity extends AppCompatActivity {
 //
 //            }
 //        });
+
+    private  void parseJson(String json){
+        InputStream input = new ByteArrayInputStream(json.getBytes());
+        JsonReader jr = new JsonReader(new InputStreamReader(input));
+        //jr.
+    }
+
+
+
+    private String getData(String url){
+        if (url == null || url.length() == 0)
+            return url;
+
+        URL requestUrl;
+        try {
+            requestUrl = new URL(url);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+
+            return null;
+        }
+
+        String json = "";
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) requestUrl.openConnection();
+            connection.setRequestMethod("GET");
+            InputStream inputStream = connection.getInputStream();
+            BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
+
+            String line = null;
+            while((line = br.readLine()) != null){
+                json += line;
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            if (connection != null)
+                connection.disconnect();
+        }
+
+        return  json;
     }
 
     @Override
