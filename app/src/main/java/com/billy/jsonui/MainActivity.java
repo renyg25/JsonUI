@@ -17,6 +17,8 @@ import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -57,6 +59,8 @@ public class MainActivity extends AppCompatActivity {
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("Loading...");
         progressDialog.setCancelable(false);
+
+        parseJsonUsingGson();
     }
 
     private void byAsyncTask(){
@@ -267,6 +271,39 @@ public class MainActivity extends AppCompatActivity {
 
         }
         return items;
+    }
+
+    private void parseJsonUsingGson(){
+        String json = "{\n" +
+                "   \"users\":[  \n" +
+                "   {  \n" +
+                "      \"id\":\"1\",\n" +
+                "      \"phone\":\"111222333\",\n" +
+                "      \"image\":\"2014-12-13-08-08-29.jpg\",\n" +
+                "      \"name\":\"john\",\n" +
+                "      \"surname\": \"doe\"\n" +
+                "   },\n" +
+                "   {  \n" +
+                "      \"id\":\"2\",\n" +
+                "      \"phone\":\"111222444\",\n" +
+                "      \"image\":\"2014-12-13-08-09-29.jpg\",\n" +
+                "      \"name\":\"anon\",\n" +
+                "      \"surname\": \"nona\"\n" +
+                "   },\n" +
+                "   {  \n" +
+                "      \n" +
+                "      \"id\":\"3\",\n" +
+                "      \"phone\":\"111222555\",\n" +
+                "      \"image\":\"2014-12-13-08-10-29.jpg\",\n" +
+                "      \"name\":\"filan\",\n" +
+                "      \"surname\": \"fisteku\"\n" +
+                "   }\n" +
+                "]\n" +
+                "}";
+
+
+        UserJO userJO = new Gson().fromJson(json, UserJO.class);
+
     }
 
     private class HttpAsncTask extends AsyncTask<String, Double, List<MusicItem>> {
