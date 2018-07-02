@@ -27,6 +27,8 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -57,48 +59,9 @@ public class MainActivity extends AppCompatActivity {
         progressDialog.setCancelable(false);
     }
 
-
-    public void onClick(View view) throws IOException {
-        Toast.makeText(this, "Clicked", Toast.LENGTH_LONG).show();
-        //byThread();
-
-        byAsyncTask();
-    }
-
     private void byAsyncTask(){
         HttpAsncTask task = new HttpAsncTask();
         task.execute(SERVERURL);
-    }
-
-
-    private class HttpAsncTask extends AsyncTask<String, Double, String> {
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-
-            progressDialog.show();
-        }
-
-        @Override
-        protected void onProgressUpdate(Double... values) {
-            super.onProgressUpdate(values);
-        }
-
-        @Override
-        protected String doInBackground(String... strings) {
-            String url = strings[0];
-            String json = getData(url);
-            return  json;
-        }
-
-        @Override
-        protected void onPostExecute(String value) {
-            super.onPostExecute(value);
-
-            progressDialog.dismiss();
-            textView.setText(value);
-        }
     }
 
     private void byThread(){
@@ -196,27 +159,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-
-//        StringRequest request = new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
-//            @Override
-//            public void onResponse(String response) {
-//                textView.setText(response);
-//            }
-//        }, new Response.ErrorListener() {
-//            @Override
-//            public void onErrorResponse(VolleyError error) {
-//
-//            }
-//        });
-
-    private  void parseJson(String json){
-        InputStream input = new ByteArrayInputStream(json.getBytes());
-        JsonReader jr = new JsonReader(new InputStreamReader(input));
-        //jr.
-    }
-
-
-
     private String getData(String url){
         if (url == null || url.length() == 0)
             return url;
@@ -253,6 +195,13 @@ public class MainActivity extends AppCompatActivity {
         return  json;
     }
 
+    public void onClick(View view) throws IOException {
+        Toast.makeText(this, "Clicked", Toast.LENGTH_LONG).show();
+        //byThread();
+
+        byAsyncTask();
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -274,4 +223,81 @@ public class MainActivity extends AppCompatActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
+    private List<MusicItem> parseJson(String json){
+        List<MusicItem> items = new ArrayList<>();
+
+        try {
+            InputStream input = new ByteArrayInputStream(json.getBytes());
+            JsonReader reader = new JsonReader(new InputStreamReader(input));
+
+            reader.beginArray();
+            while (reader.hasNext()){
+                MusicItem item = new MusicItem();
+
+                reader.beginObject();
+                while (reader.hasNext()){
+                    String name = reader.nextName();
+                    if (name.equals("_id"))
+                        item.setId(reader.nextString());
+                    else if(name.equals("count"))
+                        item.setCount(reader.nextInt());
+                    else  if(name.equals("date"))
+                        item.setDate(reader.nextString());
+                    else  if (name.equals("name"))
+                        item.setName(reader.nextString());
+                    else if(name.equals("dir"))
+                        item.setDir(reader.nextString());
+                    else if (name.equals("urlKey"))
+                        item.setUrlKey(reader.nextString());
+                    else if(name.equals("url"))
+                        item.setUrl(reader.nextString());
+                    else
+                        reader.skipValue();
+                }
+                reader.endObject();
+
+                items.add(item);
+            }
+
+            reader.endArray();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+
+        }
+        return items;
+    }
+
+    private class HttpAsncTask extends AsyncTask<String, Double, List<MusicItem>> {
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            progressDialog.show();
+        }
+
+        @Override
+        protected void onProgressUpdate(Double... values) {
+            super.onProgressUpdate(values);
+        }
+
+        @Override
+        protected List<MusicItem> doInBackground(String... strings) {
+            String url = strings[0];
+            String json = getData(url);
+            List<MusicItem> items = parseJson(json);
+            return  items;
+        }
+
+        @Override
+        protected void onPostExecute(List<MusicItem> value) {
+            super.onPostExecute(value);
+
+            progressDialog.dismiss();
+            //textView.setText(value);
+        }
+    }
+
 }
